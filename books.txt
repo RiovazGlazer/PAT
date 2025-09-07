@@ -1,0 +1,19 @@
+B1,The Great Gatsby,F. Scott Fitzgerald,Fiction,9780743273565,1925,true
+B2,Introduction to Java,James Gosling,Programming,9780135166307,2018,false
+B3,To Kill a Mockingbird,Harper Lee,Fiction,9780061120084,1960,true
+B4,1984,George Orwell,Dystopian,9780451524935,1949,false
+B5,Data Structures and Algorithms,Robert Lafore,Programming,9780672324536,2002,true
+B6,The Catcher in the Rye,J.D. Salinger,Fiction,9780316769488,1951,false
+B7,Effective Java,Joshua Bloch,Programming,9780134685991,2018,false
+B8,Pride and Prejudice,Jane Austen,Romance,9780141199078,1813,true
+B9,Artificial Intelligence,Stuart Russell,Technology,9780136042594,2021,true
+B10,The Hobbit,J.R.R. Tolkien,Fantasy,9780345339683,1937,false
+B11,The Hobbit,J.R.R. Tolkien,Fantasy,9780007458424,1937,true
+B12,Harry Potter and the Philosopher's Stone,J.K. Rowling,Fantasy,9780747532699,1997,false
+B13,Brave New World,Aldous Huxley,Science Fiction,9780060850524,1932,true
+B14,The Lord of the Rings,J.R.R. Tolkien,Fantasy,9780618640157,1954,true
+B15,Animal Farm,George Orwell,Satire,9780451526342,1945,true
+B16,The Chronicles of Narnia,C.S. Lewis,Fantasy,9780064471190,1950,false
+B17,Fahrenheit 451,Ray Bradbury,Dystopian,9781451673319,1953,true
+B18,Jane Eyre,Charlotte Brontë,Classic,9780141441146,1847,true
+B19,The Alchemist,Paulo Coelho,Philosophical,9780061122415,1988,false
