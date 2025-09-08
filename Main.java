@@ -21,23 +21,34 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
 
-//  Main Class 
+//  MAIN ENTRY POINT 
+// The Main class starts the application. It creates a FileHandler 
+// (responsible for loading and saving data from text files), then 
+// loads the library data, opens the GUI, and finally saves data 
+// when the program exits.
 public class Main {
     public static void main(String[] args){
+        // FileHandler manages reading/writing text files in "data" folder
+
         FileHandler fh=new FileHandler("data");
+        // Library contains the core logic: books, borrowers, transactions
         Library lib=new Library(fh); lib.load();
-        
+          
+        // Start the GUI (TabbedSwing is the user interface)
         new TabbedSwing(lib);
-        
+        //Save back to files when program closes
         lib.save();
     }
 
 
     }
 
-// ----- Domain Classes -----
+//  DOMAIN CLASS: Book 
+// Represents a single book in the library's collection. 
+// Each book has a unique ID, metadata (title, author, category, ISBN, year),
+// and an availability flag showing whether it can be borrowed.
 
-/** Represents a book in the library. */
+
 class Book {
     String id, title, author, category, isbn;
     int year;
@@ -50,28 +61,30 @@ class Book {
         this.category = category;
         this.isbn = isbn;
         this.year = year;
-        this.available = available;
+        this.available = available;  // true if available to borrow, false if on loan
     }
-
+ // Constructor: creates a book object with all necessary details
     String toCSV() { return id + "," + title + "," + author + "," + category + "," + isbn + "," + year + "," + available; }
-
+// Recreates a Book object from a CSV line in books.txt
     static Book fromCSV(String line) {
-        String[] p = line.split(",", -1);
-        if (p.length < 7) return null;
+        String[] p = line.split(",", -1);  // -1 ensures empty fields are preserved
+        if (p.length < 7) return null;  // Defensive check: ignore corrupt/incomplete lines
         return new Book(p[0], p[1], p[2], p[3], p[4], Integer.parseInt(p[5]), Boolean.parseBoolean(p[6]));
     }
 }
 
-/** Represents a borrower/user. */
+// DOMAIN CLASS: Borrower 
+// Represents a user/borrower who can check out books. 
+// Each borrower has a unique ID, a name, and optional contact details.
 class Borrower {
     String id, name, phone, email;
 
     Borrower(String id, String name, String phone, String email) {
         this.id = id; this.name = name; this.phone = phone; this.email = email;
     }
-
+// Converts the book object into a CSV string for saving to text file
     String toCSV() { return id + "," + name + "," + phone + "," + email; }
-
+ //Reconstructs a Borrower object from CSV line in users.txt
     static Borrower fromCSV(String line) {
         String[] p = line.split(",", -1);
         if (p.length < 4) return null;
@@ -79,24 +92,28 @@ class Borrower {
     }
 }
 
-/** Represents a borrow/return transaction. */
+//  DOMAIN CLASS: Transaction 
+// Represents a record of borrowing and returning a book.
+// Each transaction links one book to one borrower, and tracks dates
+// for borrowing, due, and returning.
+
 class Transaction {
     String id, bookId, borrowerId;
     LocalDate borrowDate, dueDate, returnDate;
 
-
+// Constructor: creates a new transaction object with all details
     Transaction(String id, String bookId, String borrowerId, LocalDate borrowDate, LocalDate dueDate, LocalDate returnDate) {
         this.id = id; this.bookId = bookId; this.borrowerId = borrowerId;
         this.borrowDate = borrowDate; this.dueDate = dueDate; this.returnDate = returnDate;
     }
-
+ // Converts transaction into a CSV line for saving in tx.txt
     String toCSV() {
         return id + "," + bookId + "," + borrowerId + "," +
                (borrowDate==null?"":borrowDate) + "," +
                (dueDate==null?"":dueDate) + "," +
                (returnDate==null?"":returnDate);
     }
-
+// Rebuilds a Transaction from a CSV line in tx.txt
     static Transaction fromCSV(String line) {
         String[] p = line.split(",", -1);
         if (p.length < 6) return null;
@@ -107,10 +124,13 @@ class Transaction {
     }
 }
 
-// ---- File Handling -----
-
-/** Handles text file persistence for books, users, and transactions. */
+//  FILE HANDLER 
+// Handles persistence (saving and loading) of books, users, and transactions
+// into simple text files using CSV format*/
 class FileHandler {
+    
+    
+    // Demo method to read books file and print to console (for debugging)
     public void demoReadBooksFile(){
         try{
             Scanner sc=new Scanner(new File("data/books.txt"));
@@ -126,24 +146,24 @@ class FileHandler {
         }
  }
     File booksFile, usersFile, txFile;
-
+// Constructor: ensures that all required files exist
     FileHandler(String dir) {
         booksFile = new File(dir, "books.txt");
         usersFile = new File(dir, "users.txt");
         txFile = new File(dir, "tx.txt");
         try {
-            booksFile.getParentFile().mkdirs();
+            booksFile.getParentFile().mkdirs();  // create /data folder if missing
             booksFile.createNewFile(); usersFile.createNewFile(); txFile.createNewFile();
         } catch (Exception e) { }
     }
-
+// Reads all non-empty lines from a file into a String array
     String[] readAll(File f) throws IOException {
         BufferedReader br = new BufferedReader(new FileReader(f));
         java.util.ArrayList<String> lines = new java.util.ArrayList<String>();
         String s; while ((s = br.readLine()) != null) { if (!s.trim().isEmpty()) lines.add(s); }
         br.close(); return lines.toArray(new String[0]);
     }
-
+// Writes an array of lines into a file, overwriting previous content
     void writeAll(File f, String[] lines) throws IOException {
         PrintWriter pw = new PrintWriter(new FileWriter(f, false));
         for (String s : lines) pw.println(s);
@@ -154,15 +174,18 @@ class FileHandler {
     }
 }
 
-//  Core Library Logic 
-
-/** Manages arrays of objects and main library logic. */
+//  LIBRARY CORE LOGIC 
+// Handles the main library operations: managing books, borrowers, 
+// transactions, and enforcing borrowing rules.
 class Library {
+     // Arrays to store objects in memory 
     Book[] books = new Book[1000]; int bookCount = 0;
     Borrower[] users = new Borrower[500]; int userCount = 0;
     Transaction[] txs = new Transaction[5000]; int txCount = 0;
-
+ // Counters to generate unique IDs (B1, U1, T1 etc.)
     int nextBook = 1, nextUser = 1, nextTx = 1;
+    // File handler for saving/loading
+
     FileHandler fh; static final int LOAN_DAYS = 14;
 
     Library(FileHandler fh) { this.fh = fh; }
@@ -195,28 +218,29 @@ class Library {
         Book b = new Book("B"+nextBook++, title, author, cat, isbn, year, true);
         books[bookCount++] = b; return b;
     }
-
+/** Edits an existing book’s details. */
     boolean editBook(String id, String t, String a, String c, int y) {
         for (int i=0;i<bookCount;i++) if (books[i].id.equals(id)) { books[i].title=t;books[i].author=a;books[i].category=c;books[i].year=y; return true; }
         return false;
     }
-
+/** Deletes a book (only if available). */
     boolean deleteBook(String id) {
         for (int i=0;i<bookCount;i++) if (books[i].id.equals(id)) {
             if (!books[i].available) throw new IllegalStateException("On loan");
             for (int j=i;j<bookCount-1;j++) books[j]=books[j+1]; bookCount--; return true;
         } return false;
     }
-
+/** Adds a new borrower with minimal details. */
     Borrower addUser(String n) { Borrower u=new Borrower("U"+nextUser++, n, "", ""); users[userCount++]=u; return u; }
 
+    /** Records a borrow transaction (marks book unavailable). */
     Transaction borrow(String bid, String uid) {
         Book b = findBook(bid); if (b==null||!b.available) throw new IllegalStateException("Not avail");
         Borrower u = findUser(uid); if (u==null) throw new IllegalArgumentException("No user");
         Transaction t=new Transaction("T"+nextTx++,bid,uid,LocalDate.now(),LocalDate.now().plusDays(LOAN_DAYS),null);
         txs[txCount++]=t; b.available=false; return t;
     }
-
+ /** Records the return of a borrowed book. */
     Transaction returnBook(String bid) {
         for (int i=txCount-1;i>=0;i--) {
             Transaction t=txs[i];
@@ -224,6 +248,7 @@ class Library {
         } throw new IllegalArgumentException("No active borrow");
     }
 
+    /** Helper: finds book by ID. */
     Book findBook(String id){for(int i=0;i<bookCount;i++) if(books[i].id.equals(id)) return books[i]; return null;}
     Borrower findUser(String id){for(int i=0;i<userCount;i++) if(users[i].id.equals(id)) return users[i]; return null;}
     Book[] allBooks(){Book[] a=new Book[bookCount]; for(int i=0;i<bookCount;i++) a[i]=books[i]; return a;}
@@ -232,7 +257,9 @@ class Library {
 
 //  CLI LOGIC
 
-/** Simple Scanner CLI using switch/if for marking. */
+//  COMMAND LINE INTERFACE (CLI) 
+// A simple text-based interface using Scanner. Demonstrates program flow 
+// with switch/if logic for marking purposes.
 class CLI {
     Library lib; Scanner sc=new Scanner(System.in);
     CLI(Library l){lib=l;}
@@ -241,27 +268,27 @@ class CLI {
             System.out.println("1.Add Book 2.List Books 3.Add User 4.Borrow 5.Return 6.Exit 7.Read Book Storage Files");
             String c=sc.nextLine();
             switch(c){
-                case "1":
+                case "1": // Add Book
                     System.out.print("Title:");String t=sc.nextLine();
                     try{Book b=lib.addBook(t,"Auth","Cat","ISBN"+System.nanoTime(),2020);System.out.println("Added "+b.id);}catch(Exception e){System.out.println(e.getMessage());}
                     break;
-                case "2":
+                case "2": // List Books
                     for(Book b:lib.allBooks())System.out.println(b.id+" "+b.title+" "+(b.available?"Avail":"Out"));
                     break;
-                case "3":
+                case "3": // Add User
                     System.out.print("Name:");Borrower u=lib.addUser(sc.nextLine());System.out.println("Added "+u.id);
                     break;
-                case "4":
+                case "4": // Borrow
                     System.out.print("Book ID:");String bid=sc.nextLine();
                     System.out.print("User ID:");String uid=sc.nextLine();
                     try{Transaction tr=lib.borrow(bid,uid);System.out.println("Due "+tr.dueDate);}catch(Exception e){System.out.println(e.getMessage());}
                     break;
-                case "5":
+                case "5":  // Return
                     System.out.print("Book ID:");try{lib.returnBook(sc.nextLine());System.out.println("Returned");}catch(Exception e){System.out.println(e.getMessage());}
                     break;
-                case "6":
+                case "6":  // Exit
                     return;
-                case "7":
+                case "7":  // Debug: read books file directly
                     lib.fh.demoReadBooksFile();
                     break;
                 default:
@@ -273,12 +300,13 @@ class CLI {
     }
 }
 
-//  Tabbed Swing GUI 
-
-/** Full tabbed Swing GUI (default startup). */
+//  TAB-BASED SWING GUI
+// A full graphical user interface using JTabbedPane. 
+// Provides panels for Adding, Managing, Borrowing, Returning, and 
+// viewing Overdue Books.
 class TabbedSwing extends JFrame {
     Library lib; DefaultTableModel bookModel=new DefaultTableModel(new Object[]{"ID","Title","Author","Cat","Year","Avail"},0);
-
+      // Create tabs for each function
     TabbedSwing(Library l){
         super("Library Book Management System — Swing");
         lib=l; setSize(700,500); setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -287,7 +315,7 @@ class TabbedSwing extends JFrame {
         tabs.add("Return Book",returnPanel()); tabs.add("Overdue Report",overduePanel());
         add(tabs); refresh(); setVisible(true);
     }
-
+ /** Panel for adding a new book */
     JPanel addPanel(){
         JPanel p=new JPanel(new GridLayout(6,2));
         JTextField t=new JTextField(),a=new JTextField(),c=new JTextField(),i=new JTextField(),y=new JTextField();
@@ -302,6 +330,7 @@ class TabbedSwing extends JFrame {
         return p;
     }
 
+    /** Panel for managing and deleting books */
     JPanel listPanel(){
         JPanel p=new JPanel(new BorderLayout());
         JTable tbl=new JTable(bookModel); p.add(new JScrollPane(tbl),BorderLayout.CENTER);
@@ -309,13 +338,14 @@ class TabbedSwing extends JFrame {
         del.addActionListener(e->{int r=tbl.getSelectedRow();if(r>=0){String id=(String)tbl.getValueAt(r,0);try{lib.deleteBook(id);}catch(Exception ex){JOptionPane.showMessageDialog(this,ex.getMessage());}refresh();}});
         return p;
     }
-
+ /** Panel for borrowing a book */
     JPanel borrowPanel(){
         JPanel p=new JPanel(); JTextField b=new JTextField(6),u=new JTextField(6); JButton bb=new JButton("Borrow");
         p.add(new JLabel("Book ID"));p.add(b); p.add(new JLabel("User ID"));p.add(u); p.add(bb);
         bb.addActionListener(e->{try{Transaction t=lib.borrow(b.getText(),u.getText());JOptionPane.showMessageDialog(this,"Due "+t.dueDate);}catch(Exception ex){JOptionPane.showMessageDialog(this,ex.getMessage());}});
         return p;
     }
+     /** Panel for returning  a book */
 
     JPanel returnPanel(){
         JPanel p=new JPanel(); JTextField b=new JTextField(6); JButton r=new JButton("Return");
@@ -323,7 +353,7 @@ class TabbedSwing extends JFrame {
         r.addActionListener(e->{try{lib.returnBook(b.getText());JOptionPane.showMessageDialog(this,"Returned");}catch(Exception ex){JOptionPane.showMessageDialog(this,ex.getMessage());}});
         return p;
     }
-
+ /** Panel for a showing overdue  book */
     JPanel overduePanel(){
         JPanel p=new JPanel(new BorderLayout());
         DefaultTableModel m=new DefaultTableModel(new Object[]{"Tx","Book","User","Due","DaysLate"},0);
@@ -332,7 +362,7 @@ class TabbedSwing extends JFrame {
         ref.addActionListener(e->{m.setRowCount(0);for(Transaction t:lib.overdue()){long d=ChronoUnit.DAYS.between(t.dueDate,LocalDate.now());m.addRow(new Object[]{t.id,t.bookId,t.borrowerId,t.dueDate,d});}});
         return p;
     }
-
+// Load overdue data into table
     void refresh(){bookModel.setRowCount(0); for(Book b:lib.allBooks()) bookModel.addRow(new Object[]{b.id,b.title,b.author,b.category,b.year,b.available});}
 }
 
